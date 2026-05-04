@@ -33,7 +33,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err: any) {
-      setError(err.message || 'Sai email hoặc mật khẩu, vui lòng thử lại.');
+      setError( 'Sai email hoặc mật khẩu, vui lòng thử lại.');
     } finally {
       setLoading(false);
     }

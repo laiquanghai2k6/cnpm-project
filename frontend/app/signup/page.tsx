@@ -27,7 +27,11 @@ export default function SignUpPage() {
       });
 
       if (error) throw error;
+      console.log('data', data)
 
+      if (data.user?.identities?.length === 0) {
+        throw new Error('Email này đã được sử dụng. Vui lòng đăng nhập!');
+      }
       if (data.user) {
         alert('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.');
         router.push('/login'); // Chuyển hướng người dùng về trang đăng nhập
