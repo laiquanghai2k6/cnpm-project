@@ -34,7 +34,7 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
+  const clientUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -194,7 +194,7 @@ export default function Chatbot() {
                         {msg.sources.map((src, idx) => (
                           <a
                             key={`${src.id}-${idx}`}
-                            href={`${apiUrl}/product/${src.id}`}
+                            href={`${clientUrl}/product/${src.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-3 p-2 bg-white rounded-xl border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all group"
