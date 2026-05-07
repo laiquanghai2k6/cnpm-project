@@ -9,7 +9,7 @@ import { ConfigModule } from '@nestjs/config'
 import { SupabaseModule } from './supabase/supabase.module';
 import { ChatModule } from './chat/chat.module';
 import { AiAdminController } from 'controllers/ai-agent.controller';
-import { RagService } from 'services/rag.service';
+import { RagModule } from './rag.module';
 @Module({
   imports: [AuthModule, OrdersModule, CartModule, ProductsModule,ChatModule,
     ConfigModule.forRoot({
@@ -17,8 +17,9 @@ import { RagService } from 'services/rag.service';
     }),
     SupabaseModule,
     ChatModule,
+    RagModule
   ],
   controllers: [AppController,AiAdminController],
-  providers: [AppService,RagService],
+  providers: [AppService],
 })
 export class AppModule {}

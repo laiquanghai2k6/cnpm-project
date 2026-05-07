@@ -19,10 +19,7 @@ export class RagService {
     private ai: GoogleGenerativeAI;
     private pinecone: Pinecone;
 
-    constructor(private configService: ConfigService,
-
-        private readonly productsService: ProductsService,
-    ) {
+    constructor(private configService: ConfigService) {
 
         this.ai = new GoogleGenerativeAI(
             this.configService.get<string>('GEMINI_API_KEY')!,
@@ -64,11 +61,8 @@ export class RagService {
         });
     }
 
-    async syncAllProductsToVector() {
+    async syncAllProductsToVector(products: Product[]) {
         console.log('🚀 Bắt đầu quá trình đồng bộ dữ liệu...');
-
-        // 1. Lấy toàn bộ data từ Supabase
-        const products = await this.productsService.findAll();
 
         if (!products || products.length === 0) {
             console.log('⚠️ Không có sản phẩm nào trong Supabase để đồng bộ.');
