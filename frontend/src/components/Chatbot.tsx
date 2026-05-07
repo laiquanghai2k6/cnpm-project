@@ -128,6 +128,12 @@ export default function Chatbot() {
                   msg.id === botMsgId ? { ...msg, sources: parsedData.data } : msg
                 ));
               }
+              // Xử lý nếu backend trả về lỗi
+              else if (parsedData.type === 'error') {
+                setMessages(prev => prev.map(msg =>
+                  msg.id === botMsgId ? { ...msg, text: parsedData.data } : msg
+                ));
+              }
             } catch (err) {
               // Bỏ qua lỗi parse JSON nếu chunk bị cắt ngang giữa chừng
             }
@@ -184,7 +190,7 @@ export default function Chatbot() {
                   </div>
 
                   <div className="flex flex-col gap-2 min-w-0">
-                    {(!isLoading || msg.sender == 'user') && <div className={`p-3 rounded-2xl text-[14px] leading-relaxed shadow-sm break-words ${msg.sender === 'user'
+                    {(msg.text || msg.sender === 'user') && <div className={`p-3 rounded-2xl text-[14px] leading-relaxed shadow-sm break-words ${msg.sender === 'user'
                       ? 'bg-blue-600 text-white rounded-tr-none'
                       : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                       }`}>

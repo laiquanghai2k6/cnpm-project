@@ -105,6 +105,10 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
         },
       };
 
+      // Chuẩn bị mảng contents cho generateContentStream
+      const contents: any[] = [...recentHistory];
+      contents.push({ role: 'user', parts: [{ text: userMessage }] });
+
       const chatModel = this.genAI.getGenerativeModel({
         model: "gemini-3.1-flash-lite-preview",
         tools: userId ? [{ functionDeclarations: [getOrderHistoryTool] }] : undefined,
@@ -114,12 +118,9 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
         THÔNG TIN SẢN PHẨM (từ dữ liệu cửa hàng, không phải đơn hàng của khách): ${finalContext}`
       });
 
-      const chat = chatModel.startChat({ history: recentHistory });
-      
-      const result = await chat.sendMessageStream(userMessage);
+      const result = await chatModel.generateContentStream({ contents });
       
       let fullAnswerText = "";
-      let functionCallInfo: any = null;
       let hasFunctionCall = false;
 
       // Vòng lặp bắn từng chữ về cho Client
@@ -127,8 +128,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
         const calls = chunk.functionCalls();
         if (calls && calls.length > 0) {
           hasFunctionCall = true;
-          functionCallInfo = calls[0];
-          // KHÔNG dùng break ở đây để SDK có thời gian nạp đủ history
+          // Không break, để consume hết stream
         } else {
           try {
             const chunkText = chunk.text();
@@ -138,50 +138,51 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
         }
       }
 
-      // QUAN TRỌNG: Phải await result.response để Gemini SDK ghi đè lượt functionCall vào chat.history
-      // Nếu không có dòng này, SDK sẽ ném lỗi 400 Bad Request
-      try {
-        await result.response;
-      } catch (err) {
-        this.logger.error("Lỗi khi await result.response:", err);
-      }
+      // Đợi stream kết thúc hoàn toàn để lấy object response gốc của model (chứa thought_signature)
+      const finalResponse = await result.response;
+      const calls = finalResponse.functionCalls();
 
-      // Xử lý Function Call sau khi stream đầu tiên đã hoàn tất
-      if (hasFunctionCall && functionCallInfo && functionCallInfo.name === 'get_my_orders' && userId) {
-        const args = functionCallInfo.args as any;
-        const days = args.days as number || 30;
-        const dateThreshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-        
-        // QUERY SUPABASE LẤY ĐƠN HÀNG
-        const { data: orders } = await this.supabaseService.getClient().from('orders')
-          .select('*, order_items(*, products(name, price))')
-          .eq('user_id', userId)
-          .gte('created_at', dateThreshold);
+      // Xử lý Function Call
+      if (hasFunctionCall && calls && calls.length > 0) {
+        const call = calls[0];
+        if (call.name === 'get_my_orders' && userId) {
+          const args = call.args as any;
+          const days = args.days as number || 30;
+          const dateThreshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+          
+          // QUERY SUPABASE LẤY ĐƠN HÀNG
+          const { data: orders } = await this.supabaseService.getClient().from('orders')
+            .select('*, order_items(*, products(name, price))')
+            .eq('user_id', userId)
+            .gte('created_at', dateThreshold);
 
-        // KHỞI TẠO LẠI CHAT ĐỂ ĐẢM BẢO HISTORY CHUẨN XÁC 100% (TRÁNH LỖI 400 CỦA SDK)
-        const historyForFunction = [
-          ...recentHistory,
-          { role: 'user', parts: [{ text: userMessage }] },
-          { role: 'model', parts: [{ functionCall: functionCallInfo }] }
-        ];
+          // VÌ BỘ SDK CỦA GEMINI HIỆN TẠI ĐANG BỊ LỖI THIẾU THOUGHT_SIGNATURE KHI CHAINING FUNCTION_RESPONSE
+          // NÊN CHÚNG TA SẼ DÙNG CÁCH TẠO PROMPT TỔNG HỢP MỚI ĐỂ VƯỢT QUA LỖI NÀY:
+          
+          const historyText = recentHistory
+             .map(h => `${h.role === 'user' ? 'Khách' : 'Bot'}: ${h.parts[0]?.text}`)
+             .join('\n');
 
-        const chatForFunction = chatModel.startChat({ history: historyForFunction });
+          const synthesisPrompt = `Lịch sử trò chuyện:
+          ${historyText}
+          
+          Khách hàng vừa hỏi: "${userMessage}".
+          Hệ thống đã truy xuất dữ liệu đơn hàng của khách trong ${days} ngày qua từ Database:
+          ${JSON.stringify(orders || [])}
+          
+          Dựa vào dữ liệu đơn hàng trên, hãy đóng vai trợ lý bán hàng và trả lời trực tiếp câu hỏi của khách hàng thật tự nhiên và ngắn gọn.`;
 
-        // PHẢN HỒI LẠI KẾT QUẢ CHO GEMINI ĐỂ NÓ DỊCH RA TEXT
-        const fnResult = await chatForFunction.sendMessageStream([{
-          functionResponse: {
-            name: 'get_my_orders',
-            response: { orders: orders || [] }
+          const synthesisModel = this.genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview" });
+          const fnResult = await synthesisModel.generateContentStream(synthesisPrompt);
+
+          // STREAM CÂU TRẢ LỜI CỦA GEMINI VỀ CHO CLIENT
+          for await (const fnChunk of fnResult.stream) {
+            try {
+              const text = fnChunk.text();
+              fullAnswerText += text;
+              yield { type: 'text', data: text };
+            } catch(e) {}
           }
-        }]);
-
-        // STREAM CÂU TRẢ LỜI CỦA GEMINI VỀ CHO CLIENT
-        for await (const fnChunk of fnResult.stream) {
-          try {
-            const text = fnChunk.text();
-            fullAnswerText += text;
-            yield { type: 'text', data: text };
-          } catch(e) {}
         }
       }
 
