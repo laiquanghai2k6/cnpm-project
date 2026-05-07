@@ -25,9 +25,11 @@ export class ChatService {
   }
 
   async *askStream(userMessage: string, history: any[] = [], userId: string | null = null) {
+    const res = await fetch('https://ipinfo.io/json');
+    console.log(await res.json());
     try {
       let geminiHistory = history.map(msg => ({
-        role: msg.sender === 'bot' ? 'model' : 'user', 
+        role: msg.sender === 'bot' ? 'model' : 'user',
         parts: [{ text: msg.text }]
       }));
 
@@ -36,17 +38,17 @@ export class ChatService {
       while (geminiHistory.length > 0 && geminiHistory[0].role === 'model') {
         geminiHistory.shift(); // Cắt bỏ phần tử đầu tiên
       }
-      
+
       // Luật 2: Lịch sử phải đi theo cặp chẵn (user rồi đến model). Nếu mảng bị lẻ, ta cắt bỏ tin cũ nhất.
       if (geminiHistory.length % 2 !== 0) {
-        geminiHistory.shift(); 
+        geminiHistory.shift();
       }
       const recentHistory = geminiHistory.slice(-2);
       let searchQuery = userMessage;
 
       // --- CẤP ĐỘ 1: BỎ QUA REWRITE NHỜ REGEX ---
       const chatOnlyKeywords = /^(hi|hello|chào|xin chào|cảm ơn|thanks|tôi ghét bạn|ok|dạ|vâng|bye|tạm biệt)$/i;
-      
+
       if (chatOnlyKeywords.test(userMessage.trim())) {
         searchQuery = "CHAT_ONLY";
       } else if (recentHistory.length > 0) {
@@ -69,7 +71,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
 
       // --- TÌM KIẾM PINECONE ---
       let finalContext = "Không cần thông tin sản phẩm, hãy trả lời giao tiếp thông thường.";
-      let validMatches:ScoredPineconeRecord<RecordMetadata>[] = [];
+      let validMatches: ScoredPineconeRecord<RecordMetadata>[] = [];
 
       if (searchQuery !== "CHAT_ONLY") {
         const embedResult = await this.genAI.getGenerativeModel({ model: "gemini-embedding-2" })
@@ -119,7 +121,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
       });
 
       const result = await chatModel.generateContentStream({ contents });
-      
+
       let fullAnswerText = "";
       let hasFunctionCall = false;
 
@@ -134,7 +136,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
             const chunkText = chunk.text();
             fullAnswerText += chunkText;
             yield { type: 'text', data: chunkText };
-          } catch(e) {}
+          } catch (e) { }
         }
       }
 
@@ -149,7 +151,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
           const args = call.args as any;
           const days = args.days as number || 30;
           const dateThreshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-          
+
           // QUERY SUPABASE LẤY ĐƠN HÀNG
           const { data: orders } = await this.supabaseService.getClient().from('orders')
             .select('*, order_items(*, products(name, price))')
@@ -158,10 +160,10 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
 
           // VÌ BỘ SDK CỦA GEMINI HIỆN TẠI ĐANG BỊ LỖI THIẾU THOUGHT_SIGNATURE KHI CHAINING FUNCTION_RESPONSE
           // NÊN CHÚNG TA SẼ DÙNG CÁCH TẠO PROMPT TỔNG HỢP MỚI ĐỂ VƯỢT QUA LỖI NÀY:
-          
+
           const historyText = recentHistory
-             .map(h => `${h.role === 'user' ? 'Khách' : 'Bot'}: ${h.parts[0]?.text}`)
-             .join('\n');
+            .map(h => `${h.role === 'user' ? 'Khách' : 'Bot'}: ${h.parts[0]?.text}`)
+            .join('\n');
 
           const synthesisPrompt = `Lịch sử trò chuyện:
           ${historyText}
@@ -181,7 +183,7 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
               const text = fnChunk.text();
               fullAnswerText += text;
               yield { type: 'text', data: text };
-            } catch(e) {}
+            } catch (e) { }
           }
         }
       }
