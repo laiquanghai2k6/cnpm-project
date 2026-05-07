@@ -26,8 +26,8 @@ export class SupabaseGuard implements CanActivate {
     this.logger.log('token', token);
     // Gửi token sang hệ thống của Supabase để tự nó kiểm tra (bất chấp ES256)
     const { data, error } = await this.supabase.auth.getUser(token);
-    this.logger.log('data', data);
-    this.logger.log('error', error);
+    this.logger.log(`data: ${JSON.stringify(data, null, 2)}`);
+    this.logger.error(`error: ${JSON.stringify(error, null, 2)}`);
     if (error || !data.user) {
       this.logger.warn(`Supabase từ chối token: ${error?.message}`);
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
