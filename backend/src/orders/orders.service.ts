@@ -90,7 +90,7 @@ export class OrdersService {
         const supabase = this.supabaseService;
         const { data, error } = await supabase.getClient()
             .from('orders')
-            .select('*, order_items(*)') // Lấy đơn hàng kèm theo chi tiết món hàng
+            .select('*, order_items(*, products(name, image_url))') // Lấy đơn hàng kèm theo chi tiết món hàng
             .order('created_at', { ascending: false });
 
         if (error) throw new InternalServerErrorException(error.message);
