@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 export default function SignUpPage() {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function SignUpPage() {
         throw new Error('Email này đã được sử dụng. Vui lòng đăng nhập!');
       }
       if (data.user) {
-        alert('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.');
+        toast.success('Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.');
         router.push('/login'); // Chuyển hướng người dùng về trang đăng nhập
       }
     } catch (err: any) {

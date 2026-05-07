@@ -76,9 +76,13 @@ export default function Chatbot() {
 
     try {
       // 3. Gọi API bằng fetch để có thể đọc stream
+      const token = localStorage.getItem('accessToken');
       const response = await fetch(`${apiUrl}/chat/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           message: userMessage,
           history: messages // Truyền lịch sử y như cũ

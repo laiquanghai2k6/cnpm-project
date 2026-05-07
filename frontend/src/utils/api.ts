@@ -20,11 +20,20 @@ api.interceptors.request.use(async (config) => {
   return Promise.reject(error);
 });
 
-// 2. Interceptor cho Response: Xử lý Tự động Refresh khi Token hết hạn
+// 2. Interceptor cho Response: Xử lý Tự động Refresh khi Token hết hạn hoặc 403
 api.interceptors.response.use(
   (response) => response, // Nếu request thành công, cứ để nó đi qua
   async (error) => {
     const originalRequest = error.config;
+
+    // Nếu lỗi là 403 (Forbidden), thực hiện đăng xuất ngay lập tức
+    if (error.response?.status === 403) {
+      console.error("Truy cập bị từ chối (403) -> Đăng xuất");
+      await supabase.auth.signOut();
+      localStorage.clear();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
 
     // Nếu lỗi là 401 (Unauthorized) và request này chưa từng được "thử lại"
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -47,6 +56,7 @@ api.interceptors.response.use(
       } catch (err) {
         // Nếu refresh cũng thất bại (hết hạn cả Refresh Token) -> Buộc đăng xuất
         console.error("Phiên đăng nhập đã hết hạn hoàn toàn");
+        await supabase.auth.signOut();
         localStorage.clear();
         window.location.href = '/login';
         return Promise.reject(err);

@@ -111,4 +111,15 @@ export class CartService {
             .delete()
             .eq('id', itemId);
     }
+
+    // Cập nhật số lượng sản phẩm trong giỏ
+    async updateQuantity(itemId: string, quantity: number) {
+        if (quantity <= 0) {
+            return this.removeItem(itemId);
+        }
+        return await this.supabase.getClient()
+            .from('cart_items')
+            .update({ quantity })
+            .eq('id', itemId);
+    }
 }

@@ -1,8 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
 
 @Injectable()
 export class SupabaseGuard implements CanActivate {
+  private readonly logger = new Logger(SupabaseGuard.name);
   private supabase;
 
   constructor() {
@@ -27,7 +28,7 @@ export class SupabaseGuard implements CanActivate {
     const { data, error } = await this.supabase.auth.getUser(token);
 
     if (error || !data.user) {
-      console.log('Supabase từ chối token:', error?.message);
+      this.logger.warn(`Supabase từ chối token: ${error?.message}`);
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }
 

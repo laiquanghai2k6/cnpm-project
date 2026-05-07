@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
@@ -15,7 +16,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             const { data: { session } } = await supabase.auth.getSession();
             
             if (!session) {
-                alert('Bạn chưa đăng nhập! Vui lòng đăng nhập để tiếp tục.');
+                toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để tiếp tục.');
                 router.push('/login');
             } else {
                 setAuthenticated(true);
@@ -28,7 +29,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (!session) {
                 setAuthenticated(false);
-                alert('Bạn chưa đăng nhập! Vui lòng đăng nhập để tiếp tục.');
+                toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để tiếp tục.');
                 router.push('/login');
             } else {
                 setAuthenticated(true);

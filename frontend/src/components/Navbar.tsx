@@ -133,7 +133,8 @@ export default function Navbar() {
                   <User className="h-5 w-5 text-gray-400" />
                   <span className="hidden sm:inline">{user.email}</span>
                 </div>
-                <button onClick={handleLogout} className="text-gray-500 hover:text-red-500 bg-gray-50 p-2 rounded-full transition-colors">
+                <Link href="/orders" className="text-sm font-semibold text-gray-600 hover:text-blue-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all">Đơn hàng của tôi</Link>
+                <button onClick={handleLogout} className="text-gray-500 hover:text-red-500 bg-gray-50 p-2 rounded-full transition-colors" title="Đăng xuất">
                   <LogOut className="h-5 w-5" />
                 </button>
               </div>

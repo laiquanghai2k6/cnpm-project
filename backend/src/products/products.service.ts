@@ -1,8 +1,10 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class ProductsService {
+    private readonly logger = new Logger(ProductsService.name);
+    
     constructor(private readonly supabase: SupabaseService) { }
 
     // Lấy danh sách tất cả sản phẩm
@@ -23,7 +25,11 @@ export class ProductsService {
             .select('*')
             .eq('id', id)
             .single(); // .single() để lấy ra 1 object thay vì mảng
-        console.log('data', data, 'error', error)
+            
+        if (error) {
+            this.logger.error(`Error fetching product: ${error.message}`, error);
+        }
+        
         if (error || !data) {
             throw new NotFoundException(`Không tìm thấy sản phẩm với ID: ${id}`);
         }

@@ -1,14 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable, Logger } from '@nestjs/common';
+import { GoogleGenerativeAI, FunctionDeclaration, SchemaType } from '@google/generative-ai';
 import { Pinecone, RecordMetadata, ScoredPineconeRecord } from '@pinecone-database/pinecone';
 import { ConfigService } from '@nestjs/config';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
   private genAI: GoogleGenerativeAI;
   private pinecone: Pinecone;
 
-  constructor(private configService: ConfigService,
+  constructor(
+    private configService: ConfigService,
+    private supabaseService: SupabaseService
   ) {
 
     this.genAI = new GoogleGenerativeAI(
@@ -20,7 +24,7 @@ export class ChatService {
     });
   }
 
-  async *askStream(userMessage: string, history: any[] = []) {
+  async *askStream(userMessage: string, history: any[] = [], userId: string | null = null) {
     try {
       let geminiHistory = history.map(msg => ({
         role: msg.sender === 'bot' ? 'model' : 'user', 
@@ -85,41 +89,116 @@ Viết lại thành 1 câu tìm kiếm sản phẩm. Nếu là câu tán gẫu k
         if (context.trim() !== '') finalContext = context;
       }
 
-      // --- CẤP ĐỘ 2: TRẢ LỜI NGƯỜI DÙNG BẰNG STREAMING ---
+      // --- CẤP ĐỘ 2: TRẢ LỜI NGƯỜI DÙNG BẰNG STREAMING (HỖ TRỢ FUNCTION CALLING) ---
+      const getOrderHistoryTool: FunctionDeclaration = {
+        name: 'get_my_orders',
+        description: 'Lấy lịch sử đơn hàng của người dùng hiện tại trong một số ngày. Gọi khi người dùng hỏi về đơn hàng, tổng tiền, mua gì.',
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            days: {
+              type: SchemaType.INTEGER,
+              description: 'Số ngày muốn xem lại lịch sử (vd: 3, 7). Mặc định là 30.',
+            },
+          },
+          required: ['days'],
+        },
+      };
+
       const chatModel = this.genAI.getGenerativeModel({
         model: "gemini-3.1-flash-lite-preview",
+        tools: userId ? [{ functionDeclarations: [getOrderHistoryTool] }] : undefined,
         systemInstruction: `Bạn là trợ lý bán hàng. RẤT NGẮN GỌN.
         Nếu liệt kê sản phẩm, BẮT BUỘC dùng gạch đầu dòng và bôi đậm chính xác Tên sản phẩm.
-        DỮ LIỆU: ${finalContext}`
+        QUAN TRỌNG: Bạn CÓ QUYỀN truy cập đơn hàng của khách bằng công cụ get_my_orders. Không bao giờ được nói là bạn không có quyền!
+        THÔNG TIN SẢN PHẨM (từ dữ liệu cửa hàng, không phải đơn hàng của khách): ${finalContext}`
       });
 
       const chat = chatModel.startChat({ history: recentHistory });
       
-      // Dùng sendMessageStream thay vì sendMessage
       const result = await chat.sendMessageStream(userMessage);
       
       let fullAnswerText = "";
+      let functionCallInfo: any = null;
+      let hasFunctionCall = false;
 
       // Vòng lặp bắn từng chữ về cho Client
       for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        fullAnswerText += chunkText; // Lưu lại để tí nữa so khớp tên sản phẩm
-        
-        // Bắn chunk text ra ngoài
-        yield { type: 'text', data: chunkText };
+        const calls = chunk.functionCalls();
+        if (calls && calls.length > 0) {
+          hasFunctionCall = true;
+          functionCallInfo = calls[0];
+          // KHÔNG dùng break ở đây để SDK có thời gian nạp đủ history
+        } else {
+          try {
+            const chunkText = chunk.text();
+            fullAnswerText += chunkText;
+            yield { type: 'text', data: chunkText };
+          } catch(e) {}
+        }
       }
 
-      // --- LỌC SOURCES (Trick cũ đã áp dụng) ---
-      const finalSources = validMatches.filter(match => {
-        const productName = match.metadata?.name;
-        return productName && fullAnswerText.includes(productName as string);
-      });
+      // QUAN TRỌNG: Phải await result.response để Gemini SDK ghi đè lượt functionCall vào chat.history
+      // Nếu không có dòng này, SDK sẽ ném lỗi 400 Bad Request
+      try {
+        await result.response;
+      } catch (err) {
+        this.logger.error("Lỗi khi await result.response:", err);
+      }
 
-      // Bắn sources ra ngoài ở cuối luồng
-      yield { type: 'sources', data: finalSources.map(m => ({ id: m.id, ...m.metadata })) };
+      // Xử lý Function Call sau khi stream đầu tiên đã hoàn tất
+      if (hasFunctionCall && functionCallInfo && functionCallInfo.name === 'get_my_orders' && userId) {
+        const args = functionCallInfo.args as any;
+        const days = args.days as number || 30;
+        const dateThreshold = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+        
+        // QUERY SUPABASE LẤY ĐƠN HÀNG
+        const { data: orders } = await this.supabaseService.getClient().from('orders')
+          .select('*, order_items(*, products(name, price))')
+          .eq('user_id', userId)
+          .gte('created_at', dateThreshold);
+
+        // KHỞI TẠO LẠI CHAT ĐỂ ĐẢM BẢO HISTORY CHUẨN XÁC 100% (TRÁNH LỖI 400 CỦA SDK)
+        const historyForFunction = [
+          ...recentHistory,
+          { role: 'user', parts: [{ text: userMessage }] },
+          { role: 'model', parts: [{ functionCall: functionCallInfo }] }
+        ];
+
+        const chatForFunction = chatModel.startChat({ history: historyForFunction });
+
+        // PHẢN HỒI LẠI KẾT QUẢ CHO GEMINI ĐỂ NÓ DỊCH RA TEXT
+        const fnResult = await chatForFunction.sendMessageStream([{
+          functionResponse: {
+            name: 'get_my_orders',
+            response: { orders: orders || [] }
+          }
+        }]);
+
+        // STREAM CÂU TRẢ LỜI CỦA GEMINI VỀ CHO CLIENT
+        for await (const fnChunk of fnResult.stream) {
+          try {
+            const text = fnChunk.text();
+            fullAnswerText += text;
+            yield { type: 'text', data: text };
+          } catch(e) {}
+        }
+      }
+
+      // --- LỌC SOURCES (NẾU KHÔNG GỌI HÀM) ---
+      if (!hasFunctionCall) {
+        const finalSources = validMatches.filter(match => {
+          const productName = match.metadata?.name;
+          return productName && fullAnswerText.includes(productName as string);
+        });
+
+        if (finalSources.length > 0) {
+          yield { type: 'sources', data: finalSources.map(m => ({ id: m.id, ...m.metadata })) };
+        }
+      }
 
     } catch (error) {
-      console.error('Lỗi Chat Stream:', error);
+      this.logger.error(`Lỗi Chat Stream: ${error.message}`, error);
       yield { type: 'error', data: 'Có lỗi xảy ra khi xử lý.' };
     }
   }

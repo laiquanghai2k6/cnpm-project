@@ -12,6 +12,7 @@ import {
     X
 } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
+import { toast } from 'sonner';
 
 interface Product {
     id: string;
@@ -82,7 +83,7 @@ export default function AdminDashboard() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            alert("Thêm sản phẩm thành công!");
+            toast.success("Thêm sản phẩm thành công!");
             setShowModal(false);
             setNewProduct({ name: '', price: 0, image_url: '', description: '' }); // Reset form
             setImageFile(null);
@@ -90,7 +91,7 @@ export default function AdminDashboard() {
 
         } catch (error: any) {
             console.error(error);
-            alert(error.message || "Lỗi khi thêm sản phẩm");
+            toast.error(error.message || "Lỗi khi thêm sản phẩm");
         } finally {
             setIsUploading(false);
         }
@@ -137,7 +138,7 @@ export default function AdminDashboard() {
             });
             setProducts(products.filter(p => p.id !== id));
         } catch (error) {
-            alert("Lỗi khi xóa");
+            toast.error("Lỗi khi xóa");
         }
     };
 

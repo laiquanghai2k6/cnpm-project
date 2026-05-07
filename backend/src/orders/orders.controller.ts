@@ -18,11 +18,20 @@ export class OrdersController {
     return this.ordersService.checkout(userId);
   }
 
-  // ADMIN XEM TẤT CẢ ĐƠN HÀNG (Khóa 2 lớp: Auth + Admin)
-  // GET: http://localhost:3000/orders
-  @UseGuards(SupabaseGuard, AdminGuard)
-  @Get()
-  getAllOrders() {
-    return this.ordersService.getAllOrders();
-  }
+    // ADMIN XEM TẤT CẢ ĐƠN HÀNG (Khóa 2 lớp: Auth + Admin)
+    // GET: http://localhost:3000/orders
+    @UseGuards(SupabaseGuard, AdminGuard)
+    @Get()
+    getAllOrders() {
+        return this.ordersService.getAllOrders();
+    }
+
+    // USER XEM ĐƠN HÀNG CỦA MÌNH
+    // GET: http://localhost:3000/orders/me
+    @UseGuards(SupabaseGuard)
+    @Get('me')
+    getUserOrders(@Request() req: any) {
+        const userId = req.user.userId;
+        return this.ordersService.getUserOrders(userId);
+    }
 }

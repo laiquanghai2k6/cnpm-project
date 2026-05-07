@@ -1,9 +1,13 @@
 // src/app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Chatbot from "@/components/Chatbot";
+import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" className={cn("font-sans", geist.variable)}>
       <body className={`${inter.className} bg-gray-50 text-gray-900`}>
         {/* Navbar luôn hiển thị */}
         <Navbar />
@@ -36,6 +40,7 @@ export default function RootLayout({
             © 2024 BlueStore. All rights reserved.
           </div>
         </footer>
+        <Toaster />
       </body>
     </html>
   );

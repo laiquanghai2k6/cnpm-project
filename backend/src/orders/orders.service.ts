@@ -1,9 +1,11 @@
-import { Injectable, InternalServerErrorException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CartService } from 'src/cart/cart.service';
 
 @Injectable()
 export class OrdersService {
+    private readonly logger = new Logger(OrdersService.name);
+
     constructor(private readonly supabaseService: SupabaseService,
         private readonly cartService: CartService,
 
@@ -11,13 +13,13 @@ export class OrdersService {
 
     // 1. HÀM GIẢ LẬP THANH TOÁN
     private async mockPaymentGateway(amount: number): Promise<boolean> {
-        console.log(`[Cổng thanh toán giả lập] Đang xử lý số tiền: ${amount} VNĐ...`);
+        this.logger.log(`[Cổng thanh toán giả lập] Đang xử lý số tiền: ${amount} VNĐ...`);
 
         // Giả lập thời gian chờ của mạng (1.5 giây)
         return new Promise((resolve) => {
             setTimeout(() => {
                 // Luôn trả về thành công (bạn có thể đổi thành logic random nếu muốn test lỗi)
-                console.log('[Cổng thanh toán giả lập] Thanh toán thành công!');
+                this.logger.log('[Cổng thanh toán giả lập] Thanh toán thành công!');
                 resolve(true);
             }, 1500);
         });
@@ -92,6 +94,32 @@ export class OrdersService {
             .order('created_at', { ascending: false });
 
         if (error) throw new InternalServerErrorException(error.message);
+        return data;
+    }
+
+    // 4. HÀM LẤY ĐƠN HÀNG CỦA USER ĐANG ĐĂNG NHẬP
+    async getUserOrders(userId: string) {
+        const supabase = this.supabaseService.getClient();
+        
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                order_items (
+                    *,
+                    products (
+                        name,
+                        image_url
+                    )
+                )
+            `)
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            throw new InternalServerErrorException(`Lỗi khi lấy danh sách đơn hàng: ${error.message}`);
+        }
+        
         return data;
     }
 }

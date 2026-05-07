@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
+import { toast } from 'sonner';
 
 interface AddToCartButtonProps {
     productId: string;
@@ -21,7 +22,7 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
         const token = session?.access_token || localStorage.getItem('accessToken');
 
         if (!session && !token) {
-            alert('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
+            toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
             router.push('/login');
             return;
         }
@@ -45,7 +46,7 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
             );
 
             // Hiện thông báo thành công
-            alert('Đã thêm vào giỏ hàng thành công!');
+            toast.success('Đã thêm vào giỏ hàng thành công!');
 
             // Kích hoạt sự kiện để Navbar cập nhật số lượng ngay lập tức
             window.dispatchEvent(new Event('cartUpdated'));
@@ -53,10 +54,10 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
         } catch (error: any) {
             console.error("Lỗi khi thêm vào giỏ:", error);
             if (error.response?.status === 401) {
-                alert('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
+                toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
                 router.push('/login');
             } else {
-                alert('Có lỗi xảy ra khi thêm vào giỏ hàng.');
+                toast.error('Có lỗi xảy ra khi thêm vào giỏ hàng.');
             }
         } finally {
             setIsAdding(false);

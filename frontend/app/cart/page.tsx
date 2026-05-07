@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Trash2, Plus, Minus, Loader2, ShoppingCart, X, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { getUserId } from '@/utils/auth';
+import { toast } from 'sonner';
 
 // --- Interfaces ---
 export interface ProductInfo {
@@ -41,7 +42,7 @@ function CartContent() {
     const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false); // Trạng thái đang gọi API thanh toán
     const [showQR, setShowQR] = useState<boolean>(false);
     const router = useRouter();
-
+    console.log('cart ', cartItems)
     const formatPrice = (price: number) => {
         return price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
     };
@@ -80,19 +81,19 @@ function CartContent() {
             });
 
             // 2. Thông báo thành công
-            alert('Thanh toán thành công! Đơn hàng của bạn đang được xử lý.');
-            
+            toast.success('Thanh toán thành công! Đơn hàng của bạn đang được xử lý.');
+
             // 3. Cập nhật UI: Xóa sạch giỏ hàng cục bộ và báo Navbar
             setCartItems([]);
             window.dispatchEvent(new Event('cartUpdated'));
-            
+
             // 4. Đóng modal và chuyển hướng (tùy chọn)
             setShowQR(false);
             router.push('/'); // Hoặc trang lịch sử đơn hàng
-            
+
         } catch (error: any) {
             console.error("Lỗi checkout:", error);
-            alert(error.response?.data?.message || "Có lỗi xảy ra khi xử lý đơn hàng.");
+            toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xử lý đơn hàng.");
         } finally {
             setIsCheckingOut(false);
         }
@@ -109,8 +110,33 @@ function CartContent() {
             });
             window.dispatchEvent(new Event('cartUpdated'));
         } catch (error) {
-            alert("Lỗi khi xóa sản phẩm!");
+            toast.error("Lỗi khi xóa sản phẩm!");
             fetchCart();
+        }
+    };
+
+    const handleUpdateQuantity = async (cartItemId: string, newQuantity: number) => {
+        if (newQuantity <= 0) {
+            handleRemoveItem(cartItemId);
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('accessToken');
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            
+            // Cập nhật giao diện trước (Optimistic UI)
+            setCartItems((prev) => prev.map(item => 
+                item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+            ));
+
+            await axios.patch(`${apiUrl}/cart/${cartItemId}`, { quantity: newQuantity }, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            window.dispatchEvent(new Event('cartUpdated'));
+        } catch (error) {
+            toast.error("Lỗi khi cập nhật số lượng!");
+            fetchCart(); // Hoàn tác nếu lỗi
         }
     };
 
@@ -153,9 +179,9 @@ function CartContent() {
                                     </div>
                                     <div className="flex justify-between items-center mt-4">
                                         <div className="flex items-center border rounded-lg">
-                                            <button className="p-1 px-3 hover:bg-gray-100"><Minus size={14}/></button>
+                                            <button onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} className="p-1 px-3 hover:bg-gray-100"><Minus size={14} /></button>
                                             <span className="px-3 border-x">{item.quantity}</span>
-                                            <button className="p-1 px-3 hover:bg-gray-100"><Plus size={14}/></button>
+                                            <button onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} className="p-1 px-3 hover:bg-gray-100"><Plus size={14} /></button>
                                         </div>
                                         <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 flex items-center gap-1 text-sm font-medium">
                                             <Trash2 size={16} /> Xóa
@@ -177,7 +203,7 @@ function CartContent() {
                         <span>Tổng cộng</span>
                         <span className="text-blue-600">{formatPrice(totalAmount)}</span>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setShowQR(true)}
                         className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg active:scale-95"
                     >
@@ -199,9 +225,9 @@ function CartContent() {
 
                         <div className="p-6 text-center">
                             <div className="bg-gray-50 p-4 rounded-2xl border-2 border-dashed border-gray-200 mb-6">
-                                <img 
-                                    src="https://i.ibb.co/VcmksbKc/E381-FCE9-FC5-D-4-D86-8-AF5-D9-DE835-B67-E2.png" 
-                                    alt="QR Payment" 
+                                <img
+                                    src="https://i.ibb.co/VcmksbKc/E381-FCE9-FC5-D-4-D86-8-AF5-D9-DE835-B67-E2.png"
+                                    alt="QR Payment"
                                     className="w-full aspect-square rounded-lg object-contain"
                                 />
                             </div>
@@ -211,7 +237,7 @@ function CartContent() {
                                 <p className="text-3xl font-black text-gray-900">{formatPrice(totalAmount)}</p>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={handleActualCheckout}
                                 disabled={isCheckingOut}
                                 className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-black transition-all disabled:bg-gray-400"
@@ -234,4 +260,4 @@ function CartContent() {
             )}
         </div>
     );
-}
+}
