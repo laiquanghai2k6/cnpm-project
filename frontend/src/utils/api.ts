@@ -12,8 +12,14 @@ api.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    // Cập nhật lại localStorage để đồng bộ với các hàm cũ nếu cần
-    localStorage.setItem('accessToken', token);
+    if (typeof window !== 'undefined') {
+      const isRemember = window.localStorage.getItem('rememberMeFlag') === 'true';
+      if (isRemember) {
+        window.localStorage.setItem('accessToken', token);
+      } else {
+        window.sessionStorage.setItem('accessToken', token);
+      }
+    }
   }
   return config;
 }, (error) => {
@@ -31,6 +37,7 @@ api.interceptors.response.use(
       console.error("Truy cập bị từ chối (403) -> Đăng xuất");
       await supabase.auth.signOut();
       localStorage.clear();
+      sessionStorage.clear();
       window.location.href = '/login';
       return Promise.reject(error);
     }
@@ -46,7 +53,14 @@ api.interceptors.response.use(
         if (refreshError || !data.session) throw refreshError;
 
         const newToken = data.session.access_token;
-        localStorage.setItem('accessToken', newToken);
+        if (typeof window !== 'undefined') {
+          const isRemember = window.localStorage.getItem('rememberMeFlag') === 'true';
+          if (isRemember) {
+            window.localStorage.setItem('accessToken', newToken);
+          } else {
+            window.sessionStorage.setItem('accessToken', newToken);
+          }
+        }
 
         // Thay token cũ bằng token mới vào header của request bị lỗi
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -58,6 +72,7 @@ api.interceptors.response.use(
         console.error("Phiên đăng nhập đã hết hạn hoàn toàn");
         await supabase.auth.signOut();
         localStorage.clear();
+        sessionStorage.clear();
         window.location.href = '/login';
         return Promise.reject(err);
       }

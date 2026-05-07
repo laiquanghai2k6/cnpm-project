@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -18,22 +19,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
+      localStorage.setItem('rememberMeFlag', rememberMe ? 'true' : 'false');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
       if (error) throw error;
 
       if (data.user) {
-        localStorage.setItem('userId', data.user.id);
-        localStorage.setItem('accessToken', data.session?.access_token || '');
-        
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('userId', data.user.id);
+        storage.setItem('accessToken', data.session?.access_token || '');
+        window.dispatchEvent(new Event('auth-change'));
         router.push('/');
         router.refresh();
       }
     } catch (err: any) {
-      setError( 'Sai email hoặc mật khẩu, vui lòng thử lại.');
+      setError('Sai email hoặc mật khẩu, vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -48,7 +51,7 @@ export default function LoginPage() {
         <p className="text-center text-gray-500 mb-8">
           Đăng nhập để quản lý giỏ hàng của bạn
         </p>
-        
+
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 border border-red-100">
             {error}
@@ -79,10 +82,33 @@ export default function LoginPage() {
             />
           </div>
 
-          <button 
-            type="submit" 
+          {/* 4. Thêm giao diện Checkbox Remember Me */}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer transition-colors"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 cursor-pointer select-none">
+                Ghi nhớ tài khoản
+              </label>
+            </div>
+
+            {/* Tùy chọn thêm nút Quên mật khẩu nếu bạn cần */}
+            <div className="text-sm">
+              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                Quên mật khẩu?
+              </a>
+            </div>
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
-            className={`w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100 mt-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-100 mt-4 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
             {loading ? 'Đang xử lý...' : 'Đăng nhập ngay'}
           </button>

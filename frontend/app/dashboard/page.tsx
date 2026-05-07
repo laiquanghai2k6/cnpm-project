@@ -93,7 +93,7 @@ export default function AdminDashboard() {
 
             // 2. Gửi dữ liệu tạo sản phẩm (kèm URL ảnh vừa upload) xuống Backend của bạn
             const productPayload = { ...newProduct, image_url: finalImageUrl };
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
 
             await axios.post(`${apiUrl}/products`, productPayload, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const headers = { Authorization: `Bearer ${token}` };
 
             // 1. Lấy danh sách sản phẩm
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
     const handleDeleteProduct = async (id: string) => {
         if (!confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             await axios.delete(`${apiUrl}/products/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });

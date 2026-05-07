@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Send, User, Bot, Loader2, Image as ImageIcon } from 'lucide-react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
@@ -30,9 +31,11 @@ export default function Chatbot() {
       timestamp: new Date(),
     },
   ]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   const clientUrl = process.env.NEXT_PUBLIC_CLIENT_URL || 'http://localhost:3000';
   const scrollToBottom = () => {
@@ -76,10 +79,10 @@ export default function Chatbot() {
 
     try {
       // 3. Gọi API bằng fetch để có thể đọc stream
-      const token = localStorage.getItem('accessToken');
+      const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
       const response = await fetch(`${apiUrl}/chat/stream`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
@@ -150,6 +153,35 @@ export default function Chatbot() {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    // Lấy userId từ storage
+    const getUserIdFromStorage = () => sessionStorage.getItem('userId') || localStorage.getItem('userId');
+
+    // 1. Load userId lần đầu khi component mount
+    setUserId(getUserIdFromStorage());
+
+    // 2. Tạo hàm xử lý khi auth thay đổi
+    const handleAuthChange = () => {
+      const currentUserId = getUserIdFromStorage();
+      setUserId(currentUserId);
+      // Nếu logout, tự động đóng cửa sổ chat
+      if (!currentUserId) {
+        setIsOpen(false);
+      }
+    };
+
+    // 3. Lắng nghe sự kiện 'storage' (khi thay đổi ở tab khác) 
+    // và custom event 'auth-change' (khi thay đổi ở tab hiện tại)
+    window.addEventListener('storage', handleAuthChange);
+    window.addEventListener('auth-change', handleAuthChange);
+
+    return () => {
+      window.removeEventListener('storage', handleAuthChange);
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
+  }, []);
+  
+  if (!userId || pathname === '/login' || pathname === '/signup') return null;
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end">
       {/* Chat Window */}

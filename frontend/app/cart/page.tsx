@@ -49,8 +49,10 @@ function CartContent() {
 
     const fetchCart = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            console.log('token', token)
             if (!token) return;
+
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
             const res = await axios.get<CartItemAPIResponse>(`${apiUrl}/cart`, {
                 headers: { Authorization: `Bearer ${token}` },
@@ -71,7 +73,7 @@ function CartContent() {
     const handleActualCheckout = async () => {
         setIsCheckingOut(true);
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
             // 1. Gọi API đặt hàng
@@ -102,7 +104,7 @@ function CartContent() {
     const handleRemoveItem = async (cartItemId: string) => {
         if (!window.confirm('Xóa sản phẩm này khỏi giỏ hàng?')) return;
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
             setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
             await axios.delete(`${apiUrl}/cart/${cartItemId}`, {
@@ -122,11 +124,11 @@ function CartContent() {
         }
 
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            
+
             // Cập nhật giao diện trước (Optimistic UI)
-            setCartItems((prev) => prev.map(item => 
+            setCartItems((prev) => prev.map(item =>
                 item.id === cartItemId ? { ...item, quantity: newQuantity } : item
             ));
 

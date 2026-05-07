@@ -14,18 +14,19 @@ export default function Navbar() {
   const router = useRouter();
 
   const fetchCartCount = async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+    
     if (!token) {
       setCartCount(0);
       return;
     }
-    
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await axios.get(`${apiUrl}/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       const items = res.data.cart_items || [];
       const totalQuantity = items.reduce((sum: number, item: any) => sum + item.quantity, 0);
       setCartCount(totalQuantity);
@@ -35,9 +36,9 @@ export default function Navbar() {
     }
   };
 
-  const checkAdminRole = () => {
+    const checkAdminRole = () => {
     try {
-      const sessionData = localStorage.getItem('sb-tbkujuounzldpribaabq-auth-token');
+      const sessionData = sessionStorage.getItem('sb-tbkujuounzldpribaabq-auth-token') || localStorage.getItem('sb-tbkujuounzldpribaabq-auth-token'); 
       if (sessionData) {
         const parsedData = JSON.parse(sessionData);
         if (parsedData?.user?.role === 'admin' || parsedData?.user?.user_metadata?.role === 'admin') {
@@ -84,10 +85,12 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem('userId');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('sb-tbkujuounzldpribaabq-auth-token'); 
-    
+    localStorage.clear();
+    sessionStorage.clear();
+    // localStorage.removeItem('userId');
+    // localStorage.removeItem('accessToken');
+    // localStorage.removeItem('sb-tbkujuounzldpribaabq-auth-token'); 
+
     setCartCount(0);
     setIsAdmin(false);
     router.push('/login');
@@ -105,8 +108,8 @@ export default function Navbar() {
           {/* MENU TRUNG TÂM (DASHBOARD ADMIN) */}
           <div className="hidden md:flex flex-1  justify-end pr-10">
             {isAdmin && (
-              <Link 
-                href="/dashboard" 
+              <Link
+                href="/dashboard"
                 className="flex items-center gap-2 bg-blue-50 px-5 py-2 rounded-lg border border-blue-100 text-sm font-semibold text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all shadow-sm"
               >
                 <LayoutDashboard size={18} />
@@ -117,15 +120,15 @@ export default function Navbar() {
 
           {/* ICONS PHẢI */}
           <div className="flex items-center gap-4">
-            
-              <Link href="/cart" className="relative text-gray-700 hover:text-blue-600">
-                <ShoppingCart className="h-6 w-6" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartCount > 99 ? '99+' : cartCount}
-                  </span>
-                )}
-              </Link>
+
+            <Link href="/cart" className="relative text-gray-700 hover:text-blue-600">
+              <ShoppingCart className="h-6 w-6" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </Link>
 
             {user ? (
               <div className="flex items-center gap-4">

@@ -2,7 +2,7 @@ import { supabase } from "./supabase";
 
 export const getUserId = (): string | null => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('userId');
+    return window.sessionStorage.getItem('userId') || window.localStorage.getItem('userId');
   }
   return null;
 };
@@ -22,8 +22,13 @@ export const getValidToken = async () => {
   // Nếu token sắp hết hạn, Supabase sẽ tự động refresh ở đây
   const token = session.access_token;
   
-  // Cập nhật lại localStorage để các hàm khác dùng đồng bộ
-  localStorage.setItem('accessToken', token);
+  // Cập nhật lại localStorage/sessionStorage để các hàm khác dùng đồng bộ
+  const isRemember = window.localStorage.getItem('rememberMeFlag') === 'true';
+  if (isRemember) {
+    window.localStorage.setItem('accessToken', token);
+  } else {
+    window.sessionStorage.setItem('accessToken', token);
+  }
   
   return token;
 };

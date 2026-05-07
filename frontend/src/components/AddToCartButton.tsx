@@ -19,7 +19,8 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
     const handleAddToCart = async () => {
         // 1. Kiểm tra đăng nhập
         const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token || localStorage.getItem('accessToken');
+        const token = session?.access_token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+        const userId = session?.user?.id || sessionStorage.getItem('userId') || localStorage.getItem('userId');
 
         if (!session && !token) {
             toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
