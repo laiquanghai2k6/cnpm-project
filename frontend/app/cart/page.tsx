@@ -42,7 +42,6 @@ function CartContent() {
     const [isCheckingOut, setIsCheckingOut] = useState<boolean>(false); // Trạng thái đang gọi API thanh toán
     const [showQR, setShowQR] = useState<boolean>(false);
     const router = useRouter();
-    console.log('cart ', cartItems)
     const formatPrice = (price: number) => {
         return price.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
     };
@@ -50,13 +49,15 @@ function CartContent() {
     const fetchCart = async () => {
         try {
             const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-            console.log('token', token)
+            console.log("Token khi fetch cart:", token);
             if (!token) return;
 
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
             const res = await axios.get<CartItemAPIResponse>(`${apiUrl}/cart`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
+            console.log("Token khi fetch cart:", res);
+
             setCartItems(res.data.cart_items || []);
         } catch (error) {
             console.error("Lỗi fetch giỏ hàng:", error);
@@ -77,7 +78,6 @@ function CartContent() {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
             // 1. Gọi API đặt hàng
-            console.log('token', token)
             await axios.post(`${apiUrl}/orders/checkout`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
