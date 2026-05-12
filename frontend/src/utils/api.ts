@@ -45,12 +45,14 @@ api.interceptors.response.use(
 
     // Nếu lỗi là 401 (Unauthorized) và request này chưa từng được "thử lại"
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log("Đã bắt được 401, chuẩn bị retry...");
+      alert("Dừng lại để xem log: Token sắp refresh")
       originalRequest._retry = true; // Đánh dấu đã thử lại để tránh lặp vô tận
 
       try {
         // Gọi lệnh refresh session của Supabase
         const { data, error: refreshError } = await supabase.auth.refreshSession();
-        
+
         if (refreshError || !data.session) throw refreshError;
 
         const newToken = data.session.access_token;
