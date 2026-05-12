@@ -33,6 +33,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // Nếu lỗi là 403 (Forbidden), thực hiện đăng xuất ngay lập tức
+    console.log('error.response?.status:', error.response?.status);
     if (error.response?.status === 403) {
       console.error("Truy cập bị từ chối (403) -> Đăng xuất");
       await supabase.auth.signOut();
