@@ -2,7 +2,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { MessageCircle, X, Send, User, Bot, Loader2, Image as ImageIcon } from 'lucide-react';
-import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 // Định nghĩa thêm Source cho sản phẩm
 interface Source {

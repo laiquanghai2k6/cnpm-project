@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, Loader2, ShoppingCart, X, CheckCircle } from 'lucide-react';
-import axios from 'axios';
 import { getUserId } from '@/utils/auth';
 import { toast } from 'sonner';
 
@@ -27,6 +26,7 @@ export interface CartItemAPIResponse {
 }
 
 import AuthGuard from '@/components/AuthGuard';
+import api from '@/utils/api';
 
 export default function CartPage() {
     return (
@@ -53,7 +53,7 @@ function CartContent() {
             if (!token) return;
 
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            const res = await axios.get<CartItemAPIResponse>(`${apiUrl}/cart`, {
+            const res = await api.get<CartItemAPIResponse>(`${apiUrl}/cart`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             console.log("Token khi fetch cart:", res);
@@ -78,7 +78,7 @@ function CartContent() {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
             // 1. Gọi API đặt hàng
-            await axios.post(`${apiUrl}/orders/checkout`, {}, {
+            await api.post(`${apiUrl}/orders/checkout`, {}, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -107,7 +107,7 @@ function CartContent() {
             const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
             setCartItems((prev) => prev.filter((item) => item.id !== cartItemId));
-            await axios.delete(`${apiUrl}/cart/${cartItemId}`, {
+            await api.delete(`${apiUrl}/cart/${cartItemId}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             window.dispatchEvent(new Event('cartUpdated'));
@@ -132,7 +132,7 @@ function CartContent() {
                 item.id === cartItemId ? { ...item, quantity: newQuantity } : item
             ));
 
-            await axios.patch(`${apiUrl}/cart/${cartItemId}`, { quantity: newQuantity }, {
+            await api.patch(`${apiUrl}/cart/${cartItemId}`, { quantity: newQuantity }, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             window.dispatchEvent(new Event('cartUpdated'));

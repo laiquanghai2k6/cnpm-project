@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import {
     LayoutDashboard,
     Package,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
 import { toast } from 'sonner';
+import api from '@/utils/api';
 
 interface Product {
     id: string;
@@ -93,11 +93,8 @@ export default function AdminDashboard() {
 
             // 2. Gửi dữ liệu tạo sản phẩm (kèm URL ảnh vừa upload) xuống Backend của bạn
             const productPayload = { ...newProduct, image_url: finalImageUrl };
-            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
 
-            await axios.post(`${apiUrl}/products`, productPayload, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post(`${apiUrl}/products`, productPayload);
 
             toast.success("Thêm sản phẩm thành công!");
             setShowModal(false);
@@ -116,16 +113,14 @@ export default function AdminDashboard() {
 
     const fetchData = async () => {
         try {
-            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-            const headers = { Authorization: `Bearer ${token}` };
 
             // 1. Lấy danh sách sản phẩm
-            const resProducts = await axios.get(`${apiUrl}/products`);
+            const resProducts = await api.get(`${apiUrl}/products`);
             console.log('Sản phẩm từ API:', resProducts.data);
             setProducts(resProducts.data);
 
             // 2. Lấy danh sách đơn hàng để tính doanh thu
-            const resOrders = await axios.get(`${apiUrl}/orders`, { headers });
+            const resOrders = await api.get(`${apiUrl}/orders`,);
             setOrders(resOrders.data);
         } catch (error) {
             console.error("Lỗi tải dữ liệu admin:", error);
@@ -148,10 +143,7 @@ export default function AdminDashboard() {
     const handleDeleteProduct = async (id: string) => {
         if (!confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
         try {
-            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-            await axios.delete(`${apiUrl}/products/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`${apiUrl}/products/${id}`);
             setProducts(products.filter(p => p.id !== id));
         } catch (error) {
             toast.error("Lỗi khi xóa");

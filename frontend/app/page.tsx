@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import axios from 'axios';
 // Nhúng Client Component vào Server Component
 import AddToCartButton from '@/components/AddToCartButton'; 
+import api from '@/utils/api';
 
 interface Product {
   id: string;
@@ -13,7 +13,7 @@ interface Product {
 async function getProducts(): Promise<Product[]> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
-    const response = await axios.get(`${apiUrl}/products`);
+    const response = await api.get(`${apiUrl}/products`);
     console.log('API Response:', response.data); // Log dữ liệu nhận được từ API
     return response.data;
   } catch (error: any) {

@@ -1,5 +1,5 @@
 
-import axios from 'axios';
+import api from '@/utils/api';
 import ProductDetailClient from '../ProductDetailClient';
 
 interface Props {
@@ -10,7 +10,7 @@ async function getProduct(id: string) {
     try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL 
         console.log('API URL:', apiUrl);
-        const res = await axios.get(`${apiUrl}/products/${id}`);
+        const res = await api.get(`${apiUrl}/products/${id}`);
         return res.data;
     } catch (error) {
         return null;

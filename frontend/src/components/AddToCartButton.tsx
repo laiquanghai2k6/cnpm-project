@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/utils/supabase';
 import { toast } from 'sonner';
+import api from '@/utils/api';
 
 interface AddToCartButtonProps {
     productId: string;
@@ -19,10 +19,9 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
     const handleAddToCart = async () => {
         // 1. Kiểm tra đăng nhập
         const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token || sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
         const userId = session?.user?.id || sessionStorage.getItem('userId') || localStorage.getItem('userId');
 
-        if (!session && !token) {
+        if (!session ) {
             toast.error('Bạn chưa đăng nhập! Vui lòng đăng nhập để đặt đồ và mua hàng.');
             router.push('/login');
             return;
@@ -33,16 +32,11 @@ export default function AddToCartButton({ productId, text, quantity }: AddToCart
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
             // 2. Gọi API thêm vào giỏ hàng
-            await axios.post(
+            await api.post(
                 `${apiUrl}/cart`,
                 {
                     productId: productId,
                     quantity: quantity || 1
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
                 }
             );
 

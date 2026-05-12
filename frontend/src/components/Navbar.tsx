@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import { User, ShoppingCart, LogOut, LayoutDashboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
+import api from '@/utils/api';
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
@@ -23,7 +23,7 @@ export default function Navbar() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await axios.get(`${apiUrl}/cart`, {
+      const res = await api.get(`${apiUrl}/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
